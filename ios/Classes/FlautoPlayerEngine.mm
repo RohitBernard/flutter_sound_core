@@ -154,7 +154,7 @@
         FlautoPlayer* flutterSoundPlayer; // Owner
         AVAudioEngine* engine;
         AVAudioPlayerNode* playerNode;
-        AVAudioFormat* playerFormat;
+        AVAudioFormat* inputFormat;
         AVAudioFormat* outputFormat;
         AVAudioOutputNode* outputNode;
         AVAudioConverter* converter;
@@ -187,6 +187,28 @@
                 }
                
                 outputFormat = [outputNode inputFormatForBus: 0];
+           
+               NSLog(@"Sample Rate: %f", outputFormat.sampleRate);
+               NSLog(@"Channels: %u", outputFormat.channelCount);
+               if (outputFormat.commonFormat == AVAudioPCMFormatFloat32) {
+                   NSLog(@"Format: PCM Float32");
+               } else if (outputFormat.commonFormat == AVAudioPCMFormatInt16) {
+                   NSLog(@"Format: PCM Int16");
+               } else if (outputFormat.commonFormat == AVAudioPCMFormatInt32) {
+                   NSLog(@"Format: PCM Int32");
+               } else {
+                   NSLog(@"Format: Unknown");
+               }
+           
+            NSLog(@"Is Interleaved: %@", outputFormat.interleaved ? @"Yes" : @"No");
+           
+            outputFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+                                                           sampleRate:48000 // Use a standard sample rate like 44.1kHz
+                                                             channels:1      // Set to stereo or appropriate number of channels
+                                                          interleaved:YES];
+
+             
+           
                 playerNode = [[AVAudioPlayerNode alloc] init];
 
                 [engine attachNode: playerNode];
@@ -295,71 +317,116 @@
                 return PLAYER_IS_PLAYING; // ??? Not sure !!!
        }
 
-        #define NB_BUFFERS 4
-        - (int) feed: (NSData*)data
+        - (NSData*) convertPCMInt16ToFloat32: (NSData*) int16Data
         {
-                if (ready < NB_BUFFERS )
-                {
-                        int ln = (int)[data length];
-                        int frameLn = ln/2;
-                        int frameLength =  8*frameLn;// Two octets for a frame (Monophony, INT Linear 16)
+            // Get the number of samples in the int16Data buffer
+            NSInteger sampleCount = int16Data.length / sizeof(int16_t);
+            
+            // Allocate a buffer for float32 data
+            float* float32Buffer = (float*)malloc(sampleCount * sizeof(float));
+            
+            // Cast the input NSData to int16_t* for processing
+            const int16_t* int16Buffer = (const int16_t*)[int16Data bytes];
+            
+            // Normalize and convert each int16 sample to float32
+            for (NSInteger i = 0; i < sampleCount; i++) {
+                float32Buffer[i] = int16Buffer[i] / 32768.0f; // Normalize from [-32768, 32767] to [-1.0, 1.0]
+            }
+            
+            // Create NSData from the float32 buffer
+            NSData* float32Data = [NSData dataWithBytes: float32Buffer length: sampleCount * sizeof(float)];
+            
+            // Free the allocated memory
+            free(float32Buffer);
+            
+            return float32Data;
+        }
 
-                        playerFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16 sampleRate: (double)m_sampleRate channels: m_numChannels interleaved: NO];
+#define NB_BUFFERS 4
+- (int) feed: (NSData*)data
+{
+    if (ready < NB_BUFFERS)
+    {
+        int ln = (int)[data length];  // Length in bytes
+        int frameLn = ln / 2;  // Since each int16_t is 2 bytes, divide by 2
+        int frameLength = frameLn;  // For float32 output, 1 frame = 1 float
 
-                        AVAudioPCMBuffer* thePCMInputBuffer =  [[AVAudioPCMBuffer alloc] initWithPCMFormat: playerFormat frameCapacity: frameLn];
-                        memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
-                        thePCMInputBuffer.frameLength = frameLn;
-                        static bool hasData = true;
-                        hasData = true;
-                        AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
-                        {
-                                *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
-                                hasData = false;
-                                return thePCMInputBuffer;
-                        };
+        // Create input format for Int16 data
+        inputFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16
+                                                       sampleRate: (double)m_sampleRate
+                                                         channels: m_numChannels
+                                                      interleaved: YES];
 
-                        AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLength];
-                        thePCMOutputBuffer.frameLength = 0;
+        // Create a buffer for the incoming Int16 data
+        AVAudioPCMBuffer* thePCMInputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: inputFormat frameCapacity: frameLn];
+        memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
+        thePCMInputBuffer.frameLength = frameLn;
 
-                        if (converter == nil) 
-                        {
-                                converter = [[AVAudioConverter alloc]initFromFormat: playerFormat toFormat: outputFormat];
-                        }
+        // Conversion from int16 to float32
+        AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLn];
+        thePCMOutputBuffer.frameLength = frameLn;
 
-                        NSError* error;
-                        [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
-                         // if (r == AVAudioConverterOutputStatus_HaveData || true)
-                        {
-                                ++ready ;
-                                [playerNode scheduleBuffer: thePCMOutputBuffer  completionHandler:
-                                ^(void)
-                                {
-                                        dispatch_async(dispatch_get_main_queue(),
-                                        ^{
-                                                --ready;
-                                                assert(ready < NB_BUFFERS);
-                                                if (self ->waitingBlock != nil)
-                                                {
-                                                        NSData* blk = self ->waitingBlock;
-                                                        self ->waitingBlock = nil;
-                                                        int ln = (int)[blk length];
-                                                        int l = [self feed: blk]; // Recursion here
-                                                        assert (l == ln);
-                                                        [self ->flutterSoundPlayer needSomeFood: ln];
-                                                }
-                                        });
+        // Conversion loop: converting each int16 to float32
+        int16_t* inputPtr = thePCMInputBuffer.int16ChannelData[0];
+        float* outputPtr = thePCMOutputBuffer.floatChannelData[0];
 
-                                }];
-                                return ln;
-                        }
-                } else
-                {
-                        assert (ready == NB_BUFFERS);
-                        assert(waitingBlock == nil);
-                        waitingBlock = data;
-                        return 0;
-                }
-         }
+        for (int i = 0; i < frameLn; i++) {
+            // Convert int16 to float32
+            outputPtr[i] = (float)inputPtr[i] / 32767.0f;
+        }
+
+        static bool hasData = true;
+        hasData = true;
+
+        AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
+        {
+            *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
+            hasData = false;
+            return thePCMInputBuffer;
+        };
+
+        // Ensure converter is properly initialized
+        if (converter == nil)
+        {
+            converter = [[AVAudioConverter alloc] initFromFormat: inputFormat toFormat: outputFormat];
+        }
+
+        NSError* error;
+        [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
+
+        if (true) // You can replace 'true' with actual condition if needed
+        {
+            ++ready;
+            [playerNode scheduleBuffer: thePCMOutputBuffer completionHandler:
+            ^(void)
+            {
+                dispatch_async(dispatch_get_main_queue(),
+                ^{
+                    --ready;
+                    assert(ready < NB_BUFFERS);
+                    if (self->waitingBlock != nil)
+                    {
+                        NSData* blk = self->waitingBlock;
+                        self->waitingBlock = nil;
+                        int ln = (int)[blk length];
+                        int l = [self feed: blk]; // Recursion here
+                        assert(l == ln);
+                        [self->flutterSoundPlayer needSomeFood: ln];
+                    }
+                });
+            }];
+            return ln;
+        }
+    }
+    else
+    {
+        assert(ready == NB_BUFFERS);
+        assert(waitingBlock == nil);
+        waitingBlock = data;
+        return 0;
+    }
+}
+
 
 -(bool)  setVolume: (double) volume fadeDuration: (NSTimeInterval)fadeDuration// TODO
 {
