@@ -159,7 +159,7 @@
         AVAudioOutputNode* outputNode;
         AVAudioConverter* converter;
         CFTimeInterval mStartPauseTime ; // The time when playback was paused
-	CFTimeInterval systemTime ; //The time when  StartPlayer() ;
+    CFTimeInterval systemTime ; //The time when  StartPlayer() ;
         double mPauseTime ; // The number of seconds during the total Pause mode
         NSData* waitingBlock;
         long m_sampleRate ;
@@ -202,10 +202,10 @@
            
             NSLog(@"Is Interleaved: %@", outputFormat.interleaved ? @"Yes" : @"No");
            
-            outputFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
-                                                           sampleRate:48000 // Use a standard sample rate like 44.1kHz
-                                                             channels:1      // Set to stereo or appropriate number of channels
-                                                          interleaved:YES];
+//            outputFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+//                                                           sampleRate:48000 // Use a standard sample rate like 44.1kHz
+//                                                             channels:1      // Set to stereo or appropriate number of channels
+//                                                          interleaved:NO];
 
              
            
@@ -221,8 +221,8 @@
                 }
 
                 mPauseTime = 0.0; // Total number of seconds in pause mode
-		mStartPauseTime = -1; // Not in paused mode
-		systemTime = CACurrentMediaTime(); // The time when started
+        mStartPauseTime = -1; // Not in paused mode
+        systemTime = CACurrentMediaTime(); // The time when started
                 return [super init];
        }
 
@@ -243,17 +243,17 @@
 
        -(long)  getDuration
        {
-		return [self getPosition]; // It would be better if we add what is in the input buffers and not still played
+        return [self getPosition]; // It would be better if we add what is in the input buffers and not still played
        }
 
        -(long)  getPosition
        {
-		double time ;
-		if (mStartPauseTime >= 0) // In pause mode
-			time =   mStartPauseTime - systemTime - mPauseTime ;
-		else
-			time = CACurrentMediaTime() - systemTime - mPauseTime;
-		return (long)(time * 1000);
+        double time ;
+        if (mStartPauseTime >= 0) // In pause mode
+            time =   mStartPauseTime - systemTime - mPauseTime ;
+        else
+            time = CACurrentMediaTime() - systemTime - mPauseTime;
+        return (long)(time * 1000);
        }
 
        -(void)  stop
@@ -285,18 +285,18 @@
         }
        -(bool)  resume
        {
-		if (mStartPauseTime >= 0)
-			mPauseTime += CACurrentMediaTime() - mStartPauseTime;
-		mStartPauseTime = -1;
+        if (mStartPauseTime >= 0)
+            mPauseTime += CACurrentMediaTime() - mStartPauseTime;
+        mStartPauseTime = -1;
 
-		[playerNode play];
+        [playerNode play];
                 return true;
        }
 
        -(bool)  pause
        {
-		mStartPauseTime = CACurrentMediaTime();
-		[playerNode pause];
+        mStartPauseTime = CACurrentMediaTime();
+        [playerNode pause];
                 return true;
        }
 
@@ -342,77 +342,90 @@
             return float32Data;
         }
 
-        #define NB_BUFFERS 4
-        - (int) feed: (NSData*)data
+#define NB_BUFFERS 4
+- (int) feed: (NSData*)data
+{
+    if (ready < NB_BUFFERS)
+    {
+        int ln = (int)[data length];  // Length in bytes
+        int frameLn = ln / 2;  // Since each int16_t is 2 bytes, divide by 2
+        int frameLength = frameLn;  // For float32 output, 1 frame = 1 float
+
+        // Create input format for Int16 data
+        inputFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16
+                                                       sampleRate: (double)m_sampleRate
+                                                         channels: m_numChannels
+                                                      interleaved: NO];
+
+        // Create a buffer for the incoming Int16 data
+        AVAudioPCMBuffer* thePCMInputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: inputFormat frameCapacity: frameLn];
+        memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
+        thePCMInputBuffer.frameLength = frameLn;
+
+        // Conversion from int16 to float32
+        AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLn];
+        thePCMOutputBuffer.frameLength = frameLn;
+
+        // Conversion loop: converting each int16 to float32
+        int16_t* inputPtr = thePCMInputBuffer.int16ChannelData[0];
+        float* outputPtr = thePCMOutputBuffer.floatChannelData[0];
+
+        for (int i = 0; i < frameLn; i++) {
+            // Convert int16 to float32
+            outputPtr[i] = (float)inputPtr[i] / 32767.0f;
+        }
+
+        static bool hasData = true;
+        hasData = true;
+
+        AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
         {
-                if (ready < NB_BUFFERS )
-                {
-                        int ln = (int)[data length];
-                        int frameLn = ln/2;
-                        int frameLength =  8*frameLn;// Two octets for a frame (Monophony, INT Linear 16)
-                        frameLength = MAX(frameLength, (int)m_bufferSize);
+            *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
+            hasData = false;
+            return thePCMInputBuffer;
+        };
 
-                        playerFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16 sampleRate: (double)m_sampleRate channels: m_numChannels interleaved: NO];
+        // Ensure converter is properly initialized
+        if (converter == nil)
+        {
+            converter = [[AVAudioConverter alloc] initFromFormat: inputFormat toFormat: outputFormat];
+        }
 
-                        AVAudioPCMBuffer* thePCMInputBuffer =  [[AVAudioPCMBuffer alloc] initWithPCMFormat: playerFormat frameCapacity: frameLn];
-                        memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
-                        thePCMInputBuffer.frameLength = frameLn;
-                        static bool hasData = true;
-                        hasData = true;
-                        AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
-                        {
-                                *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
-                                hasData = false;
-                                return thePCMInputBuffer;
-                        };
+        NSError* error;
+        [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
 
-                        AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLength];
-                        thePCMOutputBuffer.frameLength = 0;
-
-                        if (converter == nil) 
-                        {
-                                converter = [[AVAudioConverter alloc]initFromFormat: playerFormat toFormat: outputFormat];
-                        }
-
-                        NSError* error;
-                        [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
-                         // if (r == AVAudioConverterOutputStatus_HaveData || true)
-                        {
-                                ++ready ; // The number of waiting packets to be sent by the Device
-                                [playerNode scheduleBuffer: thePCMOutputBuffer  completionHandler:
-                                ^(void)
-                                {
-                                        dispatch_async(dispatch_get_main_queue(),
-                                        ^{
-                                                --ready; // The Device has sent its packet. One less to send.
-                                                assert(ready < NB_BUFFERS);
-                                                if (self ->waitingBlock != nil)
-                                                {
-                                                        NSData* blk = self ->waitingBlock;
-                                                        self ->waitingBlock = nil;
-                                                        int ln = (int)[blk length];
-                                                        int l = [self feed: blk]; // Recursion here
-                                                        assert (l == ln);
-                                                        [self ->flutterSoundPlayer needSomeFood: ln];
-                                                }
-                                                if (ready == 0) // Nothing more to play. Send an indication to the App
-                                                {
-                                                        [self ->flutterSoundPlayer  audioPlayerDidFinishPlaying: true];
-
-                                                }
-                                        });
-
-                                }];
-                                return ln;
-                        }
-                } else
-                {
-                        assert (ready == NB_BUFFERS);
-                        assert(waitingBlock == nil);
-                        waitingBlock = data;
-                        return 0;
-                }
-         }
+        if (true) // You can replace 'true' with actual condition if needed
+        {
+            ++ready;
+            [playerNode scheduleBuffer: thePCMOutputBuffer completionHandler:
+            ^(void)
+            {
+                dispatch_async(dispatch_get_main_queue(),
+                ^{
+                    --ready;
+                    assert(ready < NB_BUFFERS);
+                    if (self->waitingBlock != nil)
+                    {
+                        NSData* blk = self->waitingBlock;
+                        self->waitingBlock = nil;
+                        int ln = (int)[blk length];
+                        int l = [self feed: blk]; // Recursion here
+                        assert(l == ln);
+                        [self->flutterSoundPlayer needSomeFood: ln];
+                    }
+                });
+            }];
+            return ln;
+        }
+    }
+    else
+    {
+        assert(ready == NB_BUFFERS);
+        assert(waitingBlock == nil);
+        waitingBlock = data;
+        return 0;
+    }
+}
 
 
 -(bool)  setVolume: (double) volume fadeDuration: (NSTimeInterval)fadeDuration// TODO
@@ -440,7 +453,7 @@
         AVAudioFormat* outputFormat;
         AVAudioOutputNode* outputNode;
         CFTimeInterval mStartPauseTime ; // The time when playback was paused
-	CFTimeInterval systemTime ; //The time when  StartPlayer() ;
+    CFTimeInterval systemTime ; //The time when  StartPlayer() ;
         double mPauseTime ; // The number of seconds during the total Pause mode
         NSData* waitingBlock;
         long m_sampleRate ;
@@ -469,17 +482,17 @@
 
        -(long)  getDuration
        {
-		return [self getPosition]; // It would be better if we add what is in the input buffers and not still played
+        return [self getPosition]; // It would be better if we add what is in the input buffers and not still played
        }
 
        -(long)  getPosition
        {
-		double time ;
-		if (mStartPauseTime >= 0) // In pause mode
-			time =   mStartPauseTime - systemTime - mPauseTime ;
-		else
-			time = CACurrentMediaTime() - systemTime - mPauseTime;
-		return (long)(time * 1000);
+        double time ;
+        if (mStartPauseTime >= 0) // In pause mode
+            time =   mStartPauseTime - systemTime - mPauseTime ;
+        else
+            time = CACurrentMediaTime() - systemTime - mPauseTime;
+        return (long)(time * 1000);
        }
 
        -(void)  startPlayerFromURL: (NSURL*) url codec: (t_CODEC)codec channels: (int)numChannels sampleRate: (long)sampleRate
@@ -490,8 +503,8 @@
                 m_numChannels= numChannels;
 
                 mPauseTime = 0.0; // Total number of seconds in pause mode
-		mStartPauseTime = -1; // Not in paused mode
-		systemTime = CACurrentMediaTime(); // The time when started
+        mStartPauseTime = -1; // Not in paused mode
+        systemTime = CACurrentMediaTime(); // The time when started
                 ready2 = 0;
        }
 
