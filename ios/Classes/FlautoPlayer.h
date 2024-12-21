@@ -57,7 +57,8 @@
 }
 
 - (FlautoPlayer*)init: (NSObject<FlautoPlayerCallback>*) callback;
-           
+
+- (void)flushPlayer;
 - (void)setVoiceProcessing: (bool) enabled;
 - (bool)isVoiceProcessingEnabled;
 - (t_PLAYER_STATE)getPlayerState;
@@ -73,7 +74,6 @@
 - (void)stopPlayer;
 - (bool)pausePlayer;
 - (bool)resumePlayer;
-- (void)flushPlayer;
 - (void)seekToPlayer: (long)time;
 - (void)setSubscriptionDuration: (long)call ;
 - (void)setVolume: (double)volume fadeDuration: (NSTimeInterval) fadeDuration;
