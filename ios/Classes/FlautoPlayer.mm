@@ -546,9 +546,9 @@ static bool _isIosDecoderSupported [] =
         [m_callBack log: DBG msg: msg];
 }
 
-- (void)flush
+- (void)flushPlayer
 {
-        [self logDebug:  @"IOS:--> flush"];
+        [self logDebug:  @"IOS:--> flushPlayer"];
         if (m_playerEngine != nil)
         {
                 [m_playerEngine flush];

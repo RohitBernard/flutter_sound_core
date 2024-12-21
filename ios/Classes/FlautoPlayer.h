@@ -73,6 +73,7 @@
 - (void)stopPlayer;
 - (bool)pausePlayer;
 - (bool)resumePlayer;
+- (void)flushPlayer;
 - (void)seekToPlayer: (long)time;
 - (void)setSubscriptionDuration: (long)call ;
 - (void)setVolume: (double)volume fadeDuration: (NSTimeInterval) fadeDuration;

@@ -32,7 +32,7 @@ abstract class FlautoPlayerEngineInterface
 	abstract long _getCurrentPosition();
 	abstract int feed(byte[] data) throws Exception;
 	abstract void _play();
-	abstract void flush();
+	abstract void _flushPlayer();
 
 
 }

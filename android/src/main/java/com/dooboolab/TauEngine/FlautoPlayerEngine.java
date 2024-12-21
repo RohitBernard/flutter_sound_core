@@ -249,7 +249,7 @@ class FlautoPlayerEngine extends FlautoPlayerEngineInterface
 		return ln;
 	}
 
-	void flush() 
+	void _flushPlayer() 
 	{
 		if (audioTrack != null) {
 			audioTrack.flush();  // Clear the audio data from the queue

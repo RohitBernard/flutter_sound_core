@@ -574,14 +574,15 @@ public class FlautoPlayer  implements MediaPlayer.OnErrorListener
 		m_callBack.log ( t_LOG_LEVEL.ERROR , msg);
 	}
 
-	public void flush()
+	public void flushPlayer()
 	{
-		if (player != null && player instanceof FlautoPlayerEngine) {
-			((FlautoPlayerEngine)player).flush();
-			m_callBack.flushPlayerCompleted(true);
+		if (player == null)
+		{
+			m_callBack.flushPlayerCompleted(false);
+			return;
 		}
-
+		player._flushPlayer();
+		m_callBack.flushPlayerCompleted(true);
 	}
-
 }
 
