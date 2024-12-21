@@ -48,7 +48,7 @@
        - (bool) seek: (double) pos;
        - (t_PLAYER_STATE) getStatus;
        - (int) feed: (NSData*)data;
-
+       - (void) flush;
 @end
 
 @interface AudioPlayerFlauto : NSObject  <FlautoPlayerEngineInterface>
@@ -69,7 +69,7 @@
        - (AVAudioPlayer*) getAudioPlayer;
        - (void) setAudioPlayer: (AVAudioPlayer*)thePlayer;
        - (int) feed: (NSData*)data;
-
+       - (void) flush;
 @end
 
 
@@ -90,7 +90,7 @@
        - (bool) seek: (double) pos;
        - (int)  getStatus;
        - (int) feed: (NSData*)data;
-
+       - (void) flush;
 @end
 
 
@@ -111,7 +111,7 @@
        - (bool) seek: (double) pos;
        - (int) getStatus;
        - (int) feed: (NSData*)data;
-
+       - (void) flush;
 @end
 
 

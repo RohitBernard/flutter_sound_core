@@ -28,6 +28,7 @@ public interface FlautoPlayerCallback
 	abstract public void pausePlayerCompleted(boolean success);
 	abstract public void resumePlayerCompleted(boolean success);
 	abstract public void startPlayerCompleted (boolean success, long duration);
+	abstract public void flushPlayerCompleted(boolean success);
 	abstract public void needSomeFood (int ln);
 	abstract public void updateProgress(long position, long duration);
 	abstract public void audioPlayerDidFinishPlaying (boolean flag);

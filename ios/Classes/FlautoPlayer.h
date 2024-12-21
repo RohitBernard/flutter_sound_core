@@ -37,6 +37,7 @@
 - (void)pausePlayerCompleted: (bool)success;
 - (void)resumePlayerCompleted: (bool)success;
 - (void)stopPlayerCompleted: (bool)success;
+- (void)flushPlayerCompleted: (bool)success;
 
 - (void)needSomeFood: (int) ln;
 - (void)updateProgressPosition: (long)position duration: (long)duration;

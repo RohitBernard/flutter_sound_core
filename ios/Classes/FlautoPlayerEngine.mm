@@ -143,6 +143,12 @@
                 return -1;
         }
 
+        -(void) flush
+        {
+                [self getAudioPlayer].stop;
+                [self setAudioPlayer: nil];
+        }
+
 @end
 
 
@@ -438,6 +444,19 @@
         return true; // TODO
 }
 
+-(void) flush
+{
+    if (playerNode != nil)
+    {
+        [playerNode stop];
+        [playerNode reset];  // Clear all scheduled buffers
+        ready = 0;  // Reset the buffer counter
+        if (waitingBlock != nil)
+        {
+            waitingBlock = nil;  // Clear any waiting blocks
+        }
+    }
+}
 
 @end
 
@@ -566,6 +585,11 @@
       - (int) feed: (NSData*)data
        {
         return 0;
+       }
+
+       -(void) flush
+       {
+        // No action needed for this class
        }
 
 

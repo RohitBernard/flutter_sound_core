@@ -154,4 +154,9 @@ class FlautoPlayerMedia extends FlautoPlayerEngineInterface
 	{
 		return mediaPlayer.getCurrentPosition();
 	}
+
+	void flush()
+	{
+		mediaPlayer.reset();
+	}
 }

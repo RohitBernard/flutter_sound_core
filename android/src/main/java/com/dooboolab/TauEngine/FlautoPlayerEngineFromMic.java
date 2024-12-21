@@ -347,4 +347,9 @@ class FlautoPlayerEngineFromMic extends FlautoPlayerEngineInterface
 		return -1;
 	}
 
+	void flush()
+	{
+		mSession.logError("flush error: not implemented");
+	}
+
 }
