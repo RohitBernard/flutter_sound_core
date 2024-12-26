@@ -212,21 +212,22 @@ public class FlautoRecorder
 						double db = 0.0;
 						if (recorder != null) {
 							double maxAmplitude = recorder.getMaxAmplitude();
+							db = maxAmplitude;
 
-							// Calculate db based on the following article.
-							// https://stackoverflow.com/questions/10655703/what-does-androids-getmaxamplitude-function-for-the-mediarecorder-actually-gi
-							//
-							double ref_pressure = 51805.5336;
-							double p = maxAmplitude / ref_pressure;
-							double p0 = 0.0002;
+							// // Calculate db based on the following article.
+							// // https://stackoverflow.com/questions/10655703/what-does-androids-getmaxamplitude-function-for-the-mediarecorder-actually-gi
+							// //
+							// double ref_pressure = 51805.5336;
+							// double p = maxAmplitude / ref_pressure;
+							// double p0 = 0.0002;
 
-							db = 20.0 * Math.log10(p / p0);
+							// db = 20.0 * Math.log10(p / p0);
 
-							// if the microphone is off we get 0 for the amplitude which causes
-							// db to be infinite.
-							if (Double.isInfinite(db)) {
-								db = 0.0;
-							}
+							// // if the microphone is off we get 0 for the amplitude which causes
+							// // db to be infinite.
+							// if (Double.isInfinite(db)) {
+							// 	db = 0.0;
+							// }
 
 						}
 

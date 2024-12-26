@@ -180,25 +180,7 @@ NSNumber* AudioRecorderEngine::dbPeakProgress()
 {
         double max = (double)maxAmplitude;
         maxAmplitude = 0;
-        if (max == 0.0)
-        {
-                // if the microphone is off we get 0 for the amplitude which causes
-                // db to be infinite.
-                return [NSNumber numberWithDouble: 0.0];
-        }
-        
-
-        // Calculate db based on the following article.
-        // https://stackoverflow.com/questions/10655703/what-does-androids-getmaxamplitude-function-for-the-mediarecorder-actually-gi
-        //
-        double ref_pressure = 51805.5336;
-        double p = max / ref_pressure;
-        double p0 = 0.0002;
-        double l = log10(p / p0);
-
-        double db = 20.0 * l;
-
-        return [NSNumber numberWithDouble: db];
+        return [NSNumber numberWithDouble: max];
 }
 
 
