@@ -174,6 +174,29 @@
 
        - (AudioEngine*)init: (FlautoPlayer*)owner
        {
+                NSError* error;
+
+                // Set the audio session category to Playback
+                [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&error];
+                if (error) {
+                NSLog(@"Error setting audio session category: %@", error);
+                return;
+                }
+
+                // Set a preferred sample rate (e.g., 44100 Hz)
+                [[AVAudioSession sharedInstance] setPreferredSampleRate:m_sampleRate error:&error];
+                if (error) {
+                NSLog(@"Error setting preferred sample rate: %@", error);
+                return;
+                }
+
+                // Activate the audio session
+                [[AVAudioSession sharedInstance] setActive:YES error:&error];
+                if (error) {
+                NSLog(@"Error activating audio session: %@", error);
+                return;
+                }
+
                 CFTimeInterval startTime = CACurrentMediaTime();
                 
                 flutterSoundPlayer = owner;
