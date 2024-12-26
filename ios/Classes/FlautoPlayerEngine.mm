@@ -172,75 +172,70 @@
         int  m_numChannels;
 }
 
-       - (AudioEngine*)init: (FlautoPlayer*)owner
-       {
-                AVAudioSession* session = [AVAudioSession sharedInstance];
-                NSLog(@"Hardware sample rate: %f", session.sampleRate);
+       - (AudioEngine*)init:(FlautoPlayer*)owner {
+        CFTimeInterval startTime = CACurrentMediaTime();
 
-                CFTimeInterval startTime = CACurrentMediaTime();
-                
-                flutterSoundPlayer = owner;
-                waitingBlock = nil;
-                engine = [[AVAudioEngine alloc] init];
-                outputNode = [engine outputNode];
-                
-                CFTimeInterval engineInitTime = CACurrentMediaTime();
-                NSLog(@"FSEVAL: Audio engine init took %.2f ms", (engineInitTime - startTime) * 1000);
-           
+        // Set up basic properties
+        flutterSoundPlayer = owner;
+        waitingBlock = nil;
+
+        // Initialize AVAudioEngine
+        engine = [[AVAudioEngine alloc] init];
+        outputNode = [engine outputNode];
+        CFTimeInterval engineInitTime = CACurrentMediaTime();
+        NSLog(@"FSEVAL: Audio engine init took %.2f ms", (engineInitTime - startTime) * 1000);
+
+        // Perform further initialization asynchronously
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                [self asyncInitializeAudioEngine];
+        });
+
+        // Initialize timers and return immediately
+        mPauseTime = 0.0;
+        mStartPauseTime = -1;
+        systemTime = CACurrentMediaTime();
+
+        CFTimeInterval endTime = CACurrentMediaTime();
+        NSLog(@"FSEVAL: Total synchronous init took %.2f ms", (endTime - startTime) * 1000);
+        return [super init];
+        }
+
+        - (void)asyncInitializeAudioEngine {
+        @autoreleasepool {
+                CFTimeInterval vpStartTime = CACurrentMediaTime();
+
+                // Set up voice processing (if enabled)
                 if (@available(iOS 13.0, *)) {
-                    if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
+                if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
                         NSError* err;
-                        CFTimeInterval vpStartTime = CACurrentMediaTime();
                         if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
-                           [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
+                        [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"Error enabling voice processing: %@", err]];
                         } else {
-                            [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
+                        [flutterSoundPlayer logDebug:@"Voice processing enabled"];
                         }
                         NSLog(@"FSEVAL: Voice processing setup took %.2f ms", (CACurrentMediaTime() - vpStartTime) * 1000);
-                    }
-                } else {
-                   [flutterSoundPlayer logDebug: @"WARNING! VoiceProcessing is only available on iOS13+"];
                 }
-               
+                }
+
                 CFTimeInterval formatStartTime = CACurrentMediaTime();
-                outputFormat = [outputNode inputFormatForBus: 0];
+                outputFormat = [outputNode inputFormatForBus:0];
                 NSLog(@"FSEVAL: Format setup took %.2f ms", (CACurrentMediaTime() - formatStartTime) * 1000);
-           
-               NSLog(@"Sample Rate: %f", outputFormat.sampleRate);
-               NSLog(@"Channels: %u", outputFormat.channelCount);
-               if (outputFormat.commonFormat == AVAudioPCMFormatFloat32) {
-                   NSLog(@"Format: PCM Float32");
-               } else if (outputFormat.commonFormat == AVAudioPCMFormatInt16) {
-                   NSLog(@"Format: PCM Int16");
-               } else if (outputFormat.commonFormat == AVAudioPCMFormatInt32) {
-                   NSLog(@"Format: PCM Int32");
-               } else {
-                   NSLog(@"Format: Unknown");
-               }
-           
-                NSLog(@"Is Interleaved: %@", outputFormat.interleaved ? @"Yes" : @"No");
-           
-                CFTimeInterval nodeSetupStartTime = CACurrentMediaTime();
+
+                // Set up player node
                 playerNode = [[AVAudioPlayerNode alloc] init];
-                [engine attachNode: playerNode];
-                [engine connect: playerNode to: outputNode format: outputFormat];
-                NSLog(@"FSEVAL: Node setup took %.2f ms", (CACurrentMediaTime() - nodeSetupStartTime) * 1000);
+                [engine attachNode:playerNode];
+                [engine connect:playerNode to:outputNode format:outputFormat];
 
-                CFTimeInterval engineStartTime = CACurrentMediaTime();
-                bool b = [engine startAndReturnError: nil];
-                if (!b)
-                {
-                        [flutterSoundPlayer logDebug: @"Cannot start the audio engine"];
+                // Start the engine
+                NSError* engineError;
+                BOOL success = [engine startAndReturnError:&engineError];
+                if (!success) {
+                [flutterSoundPlayer logDebug:@"Cannot start the audio engine"];
+                } else {
+                NSLog(@"Async: Audio engine started successfully.");
                 }
-                NSLog(@"FSEVAL: Engine start took %.2f ms", (CACurrentMediaTime() - engineStartTime) * 1000);
-
-                mPauseTime = 0.0;
-                mStartPauseTime = -1;
-                systemTime = CACurrentMediaTime();
-                
-                NSLog(@"FSEVAL: Total init took %.2f ms", (CACurrentMediaTime() - startTime) * 1000);
-                return [super init];
-       }
+        }
+        }
 
        -(void) startPlayerFromBuffer: (NSData*) dataBuffer
        {
