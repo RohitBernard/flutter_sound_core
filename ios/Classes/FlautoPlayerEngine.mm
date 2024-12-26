@@ -174,28 +174,8 @@
 
        - (AudioEngine*)init: (FlautoPlayer*)owner
        {
-                NSError* error;
-
-                // Set the audio session category to Playback
-                [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&error];
-                if (error) {
-                        NSLog(@"Error setting audio session category: %@", error);
-                        return nil;
-                }
-
-                // Set a preferred sample rate (e.g., 44100 Hz)
-                [[AVAudioSession sharedInstance] setPreferredSampleRate:m_sampleRate error:&error];
-                if (error) {
-                        NSLog(@"Error setting preferred sample rate: %@", error);
-                        return nil;
-                }
-
-                // Activate the audio session
-                [[AVAudioSession sharedInstance] setActive:YES error:&error];
-                if (error) {
-                        NSLog(@"Error activating audio session: %@", error);
-                        return nil;
-                }
+                AVAudioSession* session = [AVAudioSession sharedInstance];
+                NSLog(@"Hardware sample rate: %f", session.sampleRate);
 
                 CFTimeInterval startTime = CACurrentMediaTime();
                 
