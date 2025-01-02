@@ -211,7 +211,7 @@
            
                 CFTimeInterval vpStartTime = CACurrentMediaTime();
                 if (@available(iOS 13.0, *)) {
-                        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                        // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                          if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
                                 NSError* err;
                                 if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
@@ -220,7 +220,7 @@
                                 [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
                                 }
                         }
-                        });
+                        // });
                 } else {
                         NSLog(@"WARNING! Voice processing is only available on iOS 13+");
                 }
