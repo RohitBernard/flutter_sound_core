@@ -49,8 +49,8 @@
         NSLog(@"Starting audio session configuration...");
         NSDate *sessionStartTime = [NSDate date];
         
-        AVAudioSession *session = [AVAudioSession sharedInstance];
-        NSError *error = nil;
+        // AVAudioSession *session = [AVAudioSession sharedInstance];
+        // NSError *error = nil;
         
         // Set preferred sample rate
         // double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
@@ -80,31 +80,56 @@
         NSLog(@"Setting up audio format...");
         NSDate *formatStartTime = [NSDate date];
         
+        // Get input node
+        NSLog(@"Getting input node...");
+        NSDate *inputNodeStartTime = [NSDate date];
         AVAudioInputNode* inputNode = [engine inputNode];
+        NSLog(@"Getting input node took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:inputNodeStartTime] * 1000);
+        
+        // Get input format
+        NSLog(@"Getting input format...");
+        NSDate *inputFormatStartTime = [NSDate date];
         AVAudioFormat* inputFormat = [inputNode outputFormatForBus: 0];
         double actualSampleRate = [inputFormat sampleRate];
         AVAudioChannelLayout* layout = [inputFormat channelLayout];
+        NSLog(@"Getting input format took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:inputFormatStartTime] * 1000);
         
+        // Validate format
+        NSLog(@"Validating format...");
+        NSDate *validateStartTime = [NSDate date];
         if (actualSampleRate == 0 || layout == nil)
         {
                 [NSException raise:@"Invalid Audio Session state" format:@"The Audio Session is not in a correct state to do Recording."];
         }
+        NSLog(@"Format validation took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:validateStartTime] * 1000);
 
-        // Log actual vs preferred sample rate
+        // Log sample rates
         NSLog(@"Preferred sample rate: %f, Actual: %f", 
               preferredSampleRate, actualSampleRate);
 
+        // Get audio settings
+        NSLog(@"Getting audio settings...");
+        NSDate *settingsStartTime = [NSDate date];
         NSNumber* nbChannels = audioSettings [AVNumberOfChannelsKey];
         NSNumber* sampleRate = audioSettings [AVSampleRateKey];
+        NSLog(@"Getting audio settings took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:settingsStartTime] * 1000);
         
-        // Create recording format with desired sample rate
+        // Create recording format
+        NSLog(@"Creating recording format...");
+        NSDate *recordingFormatStartTime = [NSDate date];
         AVAudioFormat* recordingFormat = [[AVAudioFormat alloc] 
                                         initWithCommonFormat: AVAudioPCMFormatInt16 
                                         sampleRate: sampleRate.doubleValue 
                                         channels: (unsigned int)(nbChannels.unsignedIntegerValue) 
                                         interleaved: YES];
+        NSLog(@"Creating recording format took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:recordingFormatStartTime] * 1000);
         
-        NSLog(@"Audio format setup took: %.3f ms", 
+        NSLog(@"Total audio format setup took: %.3f ms", 
               [[NSDate date] timeIntervalSinceDate:formatStartTime] * 1000);
 
         // Setup converter
