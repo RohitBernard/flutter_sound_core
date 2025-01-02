@@ -213,20 +213,21 @@
                 CFTimeInterval vpStartTime = CACurrentMediaTime();
                 if (@available(iOS 13.0, *)) {
                         // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                        //  if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
-                        //         NSError* err;
-                        //         if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
-                        //         [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
-                        //         } else {
-                        //         [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
-                        //         }
-                        // }
+                        if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
+                                NSError* err;
+                                if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
+                                [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
+                                } else {
+                                [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
+                                }
+                        }
                         // });
                 } else {
                         NSLog(@"WARNING! Voice processing is only available on iOS 13+");
                 }
                 NSLog(@"[AudioEngine] Voice processing took: %.3fms", (CACurrentMediaTime() - vpStartTime) * 1000);
 
+                return [super init];
 
                 NSLog(@"[AudioEngine] Getting output format");
                 outputFormat = [outputNode inputFormatForBus: 0];
