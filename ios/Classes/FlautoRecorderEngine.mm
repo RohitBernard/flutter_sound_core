@@ -53,7 +53,7 @@
         // NSError *error = nil;
         
         // Set preferred sample rate
-        // double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
+        double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
         // [session setPreferredSampleRate:preferredSampleRate error:&error];
         // if (error) {
         //     NSLog(@"Failed to set preferred sample rate");
