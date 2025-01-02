@@ -186,8 +186,7 @@
                 [session setCategory:AVAudioSessionCategoryPlayAndRecord 
                               mode:AVAudioSessionModeVoiceChat
                            options:AVAudioSessionCategoryOptionAllowBluetooth|
-                                  AVAudioSessionCategoryOptionAllowBluetoothA2DP|
-                                  AVAudioSessionCategoryOptionDefaultToSpeaker
+                                  AVAudioSessionCategoryOptionAllowBluetoothA2DP
                              error:&error];
                 if (error) {
                     NSLog(@"Failed to set audio session category");
@@ -208,23 +207,20 @@
                 engine = [[AVAudioEngine alloc] init];
                 outputNode = [engine outputNode];
                 NSLog(@"[AudioEngine] Audio engine created: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
-           
-                CFTimeInterval engineResetTime = CACurrentMediaTime();
-                [engine stop];
-                [engine reset]; // Simplifies the audio graph
-                NSLog(@"[AudioEngine] Engine reset: %.3fms", (CACurrentMediaTime() - engineResetTime) * 1000);
-        
+
+                NSLog(@"[AudioEngine] Voice processing enabled? %d", [flutterSoundPlayer isVoiceProcessingEnabled]);
+                
                 CFTimeInterval vpStartTime = CACurrentMediaTime();
                 if (@available(iOS 13.0, *)) {
                         // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                         if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
-                                NSError* err;
-                                if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
-                                [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
-                                } else {
-                                [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
-                                }
-                        }
+                        //  if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
+                        //         NSError* err;
+                        //         if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
+                        //         [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
+                        //         } else {
+                        //         [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
+                        //         }
+                        // }
                         // });
                 } else {
                         NSLog(@"WARNING! Voice processing is only available on iOS 13+");
