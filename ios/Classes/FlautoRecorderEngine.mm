@@ -53,28 +53,28 @@
         NSError *error = nil;
         
         // Set preferred sample rate
-        double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
-        [session setPreferredSampleRate:preferredSampleRate error:&error];
-        if (error) {
-            NSLog(@"Failed to set preferred sample rate");
-        }
+        // double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
+        // [session setPreferredSampleRate:preferredSampleRate error:&error];
+        // if (error) {
+        //     NSLog(@"Failed to set preferred sample rate");
+        // }
         
-        // Set audio session category and mode
-        [session setCategory:AVAudioSessionCategoryPlayAndRecord 
-                      mode:AVAudioSessionModeDefault
-                   options:AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionAllowBluetoothA2DP
-                     error:&error];
-        if (error) {
-            NSLog(@"Failed to set audio session category");
-        }
+        // // Set audio session category and mode
+        // [session setCategory:AVAudioSessionCategoryPlayAndRecord 
+        //               mode:AVAudioSessionModeDefault
+        //            options:AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionAllowBluetoothA2DP
+        //              error:&error];
+        // if (error) {
+        //     NSLog(@"Failed to set audio session category");
+        // }
         
-        [session setActive:YES error:&error];
-        if (error) {
-            NSLog(@"Failed to activate audio session");
-        }
+        // [session setActive:YES error:&error];
+        // if (error) {
+        //     NSLog(@"Failed to activate audio session");
+        // }
 
-        NSLog(@"Audio session configuration took: %.3f ms", 
-              [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
+        // NSLog(@"Audio session configuration took: %.3f ms", 
+        //       [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
 
         // Get input format
         NSLog(@"Setting up audio format...");
