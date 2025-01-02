@@ -179,20 +179,18 @@
                 outputNode = [engine outputNode];
                 NSLog(@"[AudioEngine] Audio engine created: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
            
-                // if (@available(iOS 13.0, *)) {
-                //     if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
-                //         NSLog(@"[AudioEngine] Enabling voice processing");
-                //         NSError* err;
-                //         if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
-                //            [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
-                //         } else {
-                //             [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
-                //         }
-                //         NSLog(@"[AudioEngine] Voice processing setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
-                //     }
-                // } else {
-                //    [flutterSoundPlayer logDebug: @"WARNING! VoiceProcessing is only available on iOS13+"];
-                // }
+                if (@available(iOS 13.0, *)) {
+                        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                                NSError* vpError = nil;
+                        if (![inputNode setVoiceProcessingEnabled:YES error:&vpError]) {
+                                NSLog(@"Failed to enable voice processing: %@", vpError.localizedDescription);
+                        } else {
+                                NSLog(@"Voice processing enabled successfully");
+                        }
+                        });
+                } else {
+                NSLog(@"WARNING! Voice processing is only available on iOS 13+");
+                }
                
                 NSLog(@"[AudioEngine] Getting output format");
                 outputFormat = [outputNode inputFormatForBus: 0];
