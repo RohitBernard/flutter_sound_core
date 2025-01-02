@@ -170,35 +170,6 @@
        {
                 NSLog(@"[AudioEngine] Init start");
                 CFTimeInterval startTime = CACurrentMediaTime();
-
-                AVAudioSession *session = [AVAudioSession sharedInstance];
-                NSError *error = nil;
-
-                NSDate *sessionStartTime = [NSDate date];
-                
-                // Set preferred sample rate
-                [session setPreferredSampleRate:(double)m_sampleRate error:&error];
-                if (error) {
-                    NSLog(@"Failed to set preferred sample rate");
-                }
-                
-                // Set audio session category and mode
-                [session setCategory:AVAudioSessionCategoryPlayAndRecord 
-                              mode:AVAudioSessionModeVoiceChat
-                           options:AVAudioSessionCategoryOptionAllowBluetooth|
-                                  AVAudioSessionCategoryOptionAllowBluetoothA2DP
-                             error:&error];
-                if (error) {
-                    NSLog(@"Failed to set audio session category");
-                }
-                
-                [session setActive:YES error:&error];
-                if (error) {
-                    NSLog(@"Failed to activate audio session");
-                }
-
-                NSLog(@"[AudioEngine] Audio session configuration took: %.3f ms", 
-                      [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
                 
                 flutterSoundPlayer = owner;
                 waitingBlock = nil;
@@ -242,6 +213,37 @@
                } else {
                    NSLog(@"Format: Unknown");
                }
+
+        //        if(outputFormat.sampleRate == 0){
+        //                 AVAudioSession *session = [AVAudioSession sharedInstance];
+        //                 NSError *error = nil;
+
+        //                 NSDate *sessionStartTime = [NSDate date];
+                        
+        //                 // Set preferred sample rate
+        //                 [session setPreferredSampleRate:(double)m_sampleRate error:&error];
+        //                 if (error) {
+        //                 NSLog(@"Failed to set preferred sample rate");
+        //                 }
+                        
+        //                 // Set audio session category and mode
+        //                 [session setCategory:AVAudioSessionCategoryPlayAndRecord 
+        //                         mode:AVAudioSessionModeVoiceChat
+        //                         options:AVAudioSessionCategoryOptionAllowBluetooth|
+        //                                 AVAudioSessionCategoryOptionAllowBluetoothA2DP
+        //                         error:&error];
+        //                 if (error) {
+        //                 NSLog(@"Failed to set audio session category");
+        //                 }
+                        
+        //                 [session setActive:YES error:&error];
+        //                 if (error) {
+        //                 NSLog(@"Failed to activate audio session");
+        //                 }
+
+        //                 NSLog(@"[AudioEngine] Audio session configuration took: %.3f ms", 
+        //                 [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
+        //        }
            
             NSLog(@"Is Interleaved: %@", outputFormat.interleaved ? @"Yes" : @"No");
            
@@ -258,7 +260,7 @@
                 [engine connect: playerNode to: outputNode format: outputFormat];
                 NSLog(@"[AudioEngine] Player node setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
 
-                return [super init];
+                // MARK
 
                 NSLog(@"[AudioEngine] Starting engine");
                 bool b = [engine startAndReturnError: nil];
