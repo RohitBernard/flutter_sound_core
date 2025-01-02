@@ -43,25 +43,70 @@
         previousTS = 0;
         status = 0;
 
+        // Force audio session configuration
+        AVAudioSession *session = [AVAudioSession sharedInstance];
+        NSError *error = nil;
+        
+        // Set preferred sample rate
+        double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
+        [session setPreferredSampleRate:preferredSampleRate error:&error];
+        if (error) {
+            [flautoRecorder logDebug:@"Failed to set preferred sample rate"];
+        }
+        
+        // Set audio session category and mode
+        [session setCategory:AVAudioSessionCategoryPlayAndRecord 
+                      mode:AVAudioSessionModeDefault
+                   options:AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionAllowBluetoothA2DP
+                     error:&error];
+        if (error) {
+            [flautoRecorder logDebug:@"Failed to set audio session category"];
+        }
+        
+        [session setActive:YES error:&error];
+        if (error) {
+            [flautoRecorder logDebug:@"Failed to activate audio session"];
+        }
+
         AVAudioInputNode* inputNode = [engine inputNode];
         AVAudioFormat* inputFormat = [inputNode outputFormatForBus: 0];
-        double sRate = [inputFormat sampleRate];
-        // -AVAudioChannelCount channelCount = [inputFormat channelCount];
+        double actualSampleRate = [inputFormat sampleRate];
         AVAudioChannelLayout* layout = [inputFormat channelLayout];
-        // -CMAudioFormatDescriptionRef formatDescription = [inputFormat formatDescription];
         
-        if (sRate == 0 || layout == nil)
+        if (actualSampleRate == 0 || layout == nil)
         {
                 [NSException raise:@"Invalid Audio Session state" format:@"The Audio Session is not in a correct state to do Recording."];
         }
 
-        
-        
+        // Log actual vs preferred sample rate
+        [flautoRecorder logDebug:[NSString stringWithFormat:@"Preferred sample rate: %f, Actual: %f", 
+                                 preferredSampleRate, actualSampleRate]];
+
         NSNumber* nbChannels = audioSettings [AVNumberOfChannelsKey];
         NSNumber* sampleRate = audioSettings [AVSampleRateKey];
-        //sampleRate = [NSNumber numberWithInt: 44000];
-        AVAudioFormat* recordingFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16 sampleRate: sampleRate.doubleValue channels: (unsigned int)(nbChannels.unsignedIntegerValue) interleaved: YES];
-        AVAudioConverter* converter = [[AVAudioConverter alloc]initFromFormat: inputFormat toFormat: recordingFormat];
+        
+        // Create recording format with desired sample rate
+        AVAudioFormat* recordingFormat = [[AVAudioFormat alloc] 
+                                        initWithCommonFormat: AVAudioPCMFormatInt16 
+                                        sampleRate: sampleRate.doubleValue 
+                                        channels: (unsigned int)(nbChannels.unsignedIntegerValue) 
+                                        interleaved: YES];
+        
+        // Create converter with quality settings
+        converter = [[AVAudioConverter alloc] initFromFormat:inputFormat 
+                                                   toFormat:recordingFormat];
+        
+        // Set converter properties for better quality
+        if (actualSampleRate != sampleRate.doubleValue) {
+            [flautoRecorder logDebug:@"Setting up sample rate conversion"];
+            
+            // Set sample rate converter quality
+            [converter setSampleRateConverterQuality:AVAudioQualityHigh];
+            
+            // Optional: Set prime method if needed
+            // [converter setSampleRateConverterPrimeMethod:AVAudioConverterPrimeMethod_Normal];
+        }
+
         NSFileManager* fileManager = [NSFileManager defaultManager];
         NSURL* fileURL = nil;
         if (path != nil && path != (id)[NSNull null])
@@ -76,20 +121,26 @@
         }
 
 
-        [inputNode installTapOnBus: 0 bufferSize: 20480 format: inputFormat block:
+        [inputNode installTapOnBus: 0 bufferSize: 320 format: inputFormat block:
         ^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when)
         {
-                inputStatus = AVAudioConverterInputStatus_HaveData ;
-                AVAudioPCMBuffer* convertedBuffer = [[AVAudioPCMBuffer alloc]initWithPCMFormat: recordingFormat frameCapacity: [buffer frameCapacity]];
-
-
+                // Calculate frame capacity based on sample rate and channel count ratios
+                UInt32 capacity = (UInt32(recordingFormat.sampleRate) * recordingFormat.channelCount * buffer.frameLength) / 
+                                 (UInt32(buffer.format.sampleRate) * buffer.format.channelCount);
+                
+                // Create converted buffer with calculated capacity
+                AVAudioPCMBuffer* convertedBuffer = [[AVAudioPCMBuffer alloc]
+                                                   initWithPCMFormat: recordingFormat 
+                                                   frameCapacity: capacity];
+                
+                // Simplified input block that always returns the input buffer
                 AVAudioConverterInputBlock inputBlock =
                 ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus *outStatus)
                 {
-                        *outStatus = inputStatus;
-                        inputStatus =  AVAudioConverterInputStatus_NoDataNow;
+                        *outStatus = AVAudioConverterInputStatus_HaveData;
                         return buffer;
                 };
+
                 NSError* error;
                 [converter convertToBuffer: convertedBuffer error: &error withInputFromBlock: inputBlock];
                 if (error != nil)
@@ -99,9 +150,11 @@
                         return;
                 }
 
+                // Rest of the processing remains the same, but now uses convertedBuffer
                 int n = [convertedBuffer frameLength];
-                int16_t *const  bb = [convertedBuffer int16ChannelData][0];
-                NSData* b = [[NSData alloc] initWithBytes: bb length: n * 2 ];
+                int16_t *const bb = [convertedBuffer int16ChannelData][0];
+                NSData* b = [[NSData alloc] initWithBytes: bb length: n * 2];
+                
                 if (n > 0)
                 {
                         if (fileHandle != nil)
@@ -109,18 +162,17 @@
                                 [fileHandle writeData: b];
                         } else
                         {
-                                [flautoRecorder  recordingData: b];
+                                [flautoRecorder recordingData: b];
                         }
                         
                         int16_t* pt = [convertedBuffer int16ChannelData][0];
-                        for (int i = 0; i < [buffer frameLength]; ++pt, ++i)
+                        for (int i = 0; i < [convertedBuffer frameLength]; ++pt, ++i)
                         {
                                 short curSample = *pt;
-                                if ( curSample > maxAmplitude )
+                                if (curSample > maxAmplitude)
                                 {
                                         maxAmplitude = curSample;
                                 }
-                
                         }
                 }
         }];
