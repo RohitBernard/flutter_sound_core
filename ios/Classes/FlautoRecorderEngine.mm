@@ -93,7 +93,7 @@
                                         interleaved: YES];
         
         // Create converter with quality settings
-        converter = [[AVAudioConverter alloc] initFromFormat:inputFormat 
+        AVAudioConverter* converter = [[AVAudioConverter alloc] initFromFormat:inputFormat 
                                                    toFormat:recordingFormat];
         
         // Set converter properties for better quality
