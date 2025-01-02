@@ -37,6 +37,8 @@
 
 /* ctor */ AudioRecorderEngine::AudioRecorderEngine(t_CODEC coder, NSString* path, NSMutableDictionary* audioSettings, FlautoRecorder* owner )
 {
+        NSDate *startTime = [NSDate date];
+        
         flautoRecorder = owner;
         engine = [[AVAudioEngine alloc] init];
         dateCumul = 0;
@@ -44,6 +46,9 @@
         status = 0;
 
         // Force audio session configuration
+        NSLog(@"Starting audio session configuration...");
+        NSDate *sessionStartTime = [NSDate date];
+        
         AVAudioSession *session = [AVAudioSession sharedInstance];
         NSError *error = nil;
         
@@ -51,7 +56,7 @@
         double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
         [session setPreferredSampleRate:preferredSampleRate error:&error];
         if (error) {
-            [flautoRecorder logDebug:@"Failed to set preferred sample rate"];
+            NSLog(@"Failed to set preferred sample rate");
         }
         
         // Set audio session category and mode
@@ -60,14 +65,21 @@
                    options:AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionAllowBluetoothA2DP
                      error:&error];
         if (error) {
-            [flautoRecorder logDebug:@"Failed to set audio session category"];
+            NSLog(@"Failed to set audio session category");
         }
         
         [session setActive:YES error:&error];
         if (error) {
-            [flautoRecorder logDebug:@"Failed to activate audio session"];
+            NSLog(@"Failed to activate audio session");
         }
 
+        NSLog(@"Audio session configuration took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
+
+        // Get input format
+        NSLog(@"Setting up audio format...");
+        NSDate *formatStartTime = [NSDate date];
+        
         AVAudioInputNode* inputNode = [engine inputNode];
         AVAudioFormat* inputFormat = [inputNode outputFormatForBus: 0];
         double actualSampleRate = [inputFormat sampleRate];
@@ -79,8 +91,8 @@
         }
 
         // Log actual vs preferred sample rate
-        [flautoRecorder logDebug:[NSString stringWithFormat:@"Preferred sample rate: %f, Actual: %f", 
-                                 preferredSampleRate, actualSampleRate]];
+        NSLog(@"Preferred sample rate: %f, Actual: %f", 
+              preferredSampleRate, actualSampleRate);
 
         NSNumber* nbChannels = audioSettings [AVNumberOfChannelsKey];
         NSNumber* sampleRate = audioSettings [AVSampleRateKey];
@@ -92,21 +104,27 @@
                                         channels: (unsigned int)(nbChannels.unsignedIntegerValue) 
                                         interleaved: YES];
         
-        // Create converter with quality settings
+        NSLog(@"Audio format setup took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:formatStartTime] * 1000);
+
+        // Setup converter
+        NSLog(@"Setting up audio converter...");
+        NSDate *converterStartTime = [NSDate date];
+        
         AVAudioConverter* converter = [[AVAudioConverter alloc] initFromFormat:inputFormat 
                                                    toFormat:recordingFormat];
         
-        // Set converter properties for better quality
         if (actualSampleRate != sampleRate.doubleValue) {
-            [flautoRecorder logDebug:@"Setting up sample rate conversion"];
-            
-            // Set sample rate converter quality
             [converter setSampleRateConverterQuality:AVAudioQualityHigh];
-            
-            // Optional: Set prime method if needed
-            // [converter setSampleRateConverterPrimeMethod:AVAudioConverterPrimeMethod_Normal];
         }
 
+        NSLog(@"Audio converter setup took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:converterStartTime] * 1000);
+
+        // File setup
+        NSLog(@"Setting up file handling...");
+        NSDate *fileStartTime = [NSDate date];
+        
         NSFileManager* fileManager = [NSFileManager defaultManager];
         NSURL* fileURL = nil;
         if (path != nil && path != (id)[NSNull null])
@@ -120,7 +138,13 @@
                 fileHandle = nil;
         }
 
+        NSLog(@"File setup took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:fileStartTime] * 1000);
 
+        // Install tap
+        NSLog(@"Installing audio tap...");
+        NSDate *tapStartTime = [NSDate date];
+        
         [inputNode installTapOnBus: 0 bufferSize: 320 format: inputFormat block:
         ^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when)
         {
@@ -176,6 +200,12 @@
                         }
                 }
         }];
+
+        NSLog(@"Audio tap installation took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:tapStartTime] * 1000);
+
+        NSLog(@"Total initialization took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:startTime] * 1000);
 }
  
 void AudioRecorderEngine::startRecorder()
