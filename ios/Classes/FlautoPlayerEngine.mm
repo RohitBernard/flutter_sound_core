@@ -168,25 +168,35 @@
 
        - (AudioEngine*)init: (FlautoPlayer*)owner
        {
+                NSLog(@"[AudioEngine] Init start");
+                CFTimeInterval startTime = CACurrentMediaTime();
+                
                 flutterSoundPlayer = owner;
                 waitingBlock = nil;
+                
+                NSLog(@"[AudioEngine] Creating audio engine");
                 engine = [[AVAudioEngine alloc] init];
                 outputNode = [engine outputNode];
+                NSLog(@"[AudioEngine] Audio engine created: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
            
                 if (@available(iOS 13.0, *)) {
                     if ([flutterSoundPlayer isVoiceProcessingEnabled]) {
+                        NSLog(@"[AudioEngine] Enabling voice processing");
                         NSError* err;
                         if (![outputNode setVoiceProcessingEnabled:YES error:&err]) {
                            [flutterSoundPlayer logDebug:[NSString stringWithFormat:@"error enabling voiceProcessing => %@", err]];
                         } else {
                             [flutterSoundPlayer logDebug: @"VoiceProcessing enabled"];
                         }
+                        NSLog(@"[AudioEngine] Voice processing setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
                     }
                 } else {
                    [flutterSoundPlayer logDebug: @"WARNING! VoiceProcessing is only available on iOS13+"];
                 }
                
+                NSLog(@"[AudioEngine] Getting output format");
                 outputFormat = [outputNode inputFormatForBus: 0];
+                NSLog(@"[AudioEngine] Output format setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
            
                NSLog(@"Sample Rate: %f", outputFormat.sampleRate);
                NSLog(@"Channels: %u", outputFormat.channelCount);
@@ -209,20 +219,25 @@
 
              
            
+                NSLog(@"[AudioEngine] Creating player node");
                 playerNode = [[AVAudioPlayerNode alloc] init];
-
                 [engine attachNode: playerNode];
-
                 [engine connect: playerNode to: outputNode format: outputFormat];
+                NSLog(@"[AudioEngine] Player node setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
+
+                NSLog(@"[AudioEngine] Starting engine");
                 bool b = [engine startAndReturnError: nil];
                 if (!b)
                 {
                         [flutterSoundPlayer logDebug: @"Cannot start the audio engine"];
                 }
+                NSLog(@"[AudioEngine] Engine start completed: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
 
-                mPauseTime = 0.0; // Total number of seconds in pause mode
-        mStartPauseTime = -1; // Not in paused mode
-        systemTime = CACurrentMediaTime(); // The time when started
+                mPauseTime = 0.0;
+                mStartPauseTime = -1;
+                systemTime = CACurrentMediaTime();
+                
+                NSLog(@"[AudioEngine] Total init time: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
                 return [super init];
        }
 
@@ -279,9 +294,13 @@
 
         -(bool) play
         {
+                NSLog(@"[AudioEngine] Play start");
+                CFTimeInterval startTime = CACurrentMediaTime();
+                
                 [playerNode play];
+                
+                NSLog(@"[AudioEngine] Play completed: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
                 return true;
-
         }
        -(bool)  resume
        {
