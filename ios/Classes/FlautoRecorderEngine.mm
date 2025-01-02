@@ -87,6 +87,24 @@
         NSLog(@"Getting input node took: %.3f ms", 
               [[NSDate date] timeIntervalSinceDate:inputNodeStartTime] * 1000);
         
+        // Setup voice processing if available
+        NSLog(@"Setting up voice processing...");
+        NSDate *voiceProcessingStartTime = [NSDate date];
+
+        if (@available(iOS 13.0, *)) {
+            NSError* vpError = nil;
+            if (![inputNode setVoiceProcessingEnabled:YES error:&vpError]) {
+                NSLog(@"Failed to enable voice processing: %@", vpError.localizedDescription);
+            } else {
+                NSLog(@"Voice processing enabled successfully");
+            }
+        } else {
+            NSLog(@"WARNING! Voice processing is only available on iOS 13+");
+        }
+
+        NSLog(@"Voice processing setup took: %.3f ms", 
+              [[NSDate date] timeIntervalSinceDate:voiceProcessingStartTime] * 1000);
+
         // Get input format
         NSLog(@"Getting input format...");
         NSDate *inputFormatStartTime = [NSDate date];
