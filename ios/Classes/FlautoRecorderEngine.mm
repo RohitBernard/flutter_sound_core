@@ -46,35 +46,38 @@
         status = 0;
 
         // Force audio session configuration
-        NSLog(@"Starting audio session configuration...");
-        NSDate *sessionStartTime = [NSDate date];
+        // NSLog(@"Starting audio session configuration...");
+        // NSDate *sessionStartTime = [NSDate date];
         
+        // // Set preferred sample rate
         // AVAudioSession *session = [AVAudioSession sharedInstance];
         // NSError *error = nil;
         
         // Set preferred sample rate
         double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
-        // [session setPreferredSampleRate:preferredSampleRate error:&error];
+        // [session setPreferredSampleRate:(double)preferredSampleRate error:&error];
         // if (error) {
-        //     NSLog(@"Failed to set preferred sample rate");
+        // NSLog(@"Failed to set preferred sample rate");
         // }
         
         // // Set audio session category and mode
         // [session setCategory:AVAudioSessionCategoryPlayAndRecord 
-        //               mode:AVAudioSessionModeDefault
-        //            options:AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionAllowBluetoothA2DP
-        //              error:&error];
+        //         mode:AVAudioSessionModeVoiceChat
+        //         options:AVAudioSessionCategoryOptionAllowBluetooth|
+        //                 AVAudioSessionCategoryOptionAllowBluetoothA2DP|
+        //                 AVAudioSessionCategoryOptionDefaultToSpeaker
+        //         error:&error];
         // if (error) {
-        //     NSLog(@"Failed to set audio session category");
+        // NSLog(@"Failed to set audio session category");
         // }
         
         // [session setActive:YES error:&error];
         // if (error) {
-        //     NSLog(@"Failed to activate audio session");
+        // NSLog(@"Failed to activate audio session");
         // }
 
-        // NSLog(@"Audio session configuration took: %.3f ms", 
-        //       [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
+        // NSLog(@"[AudioEngine] Audio session configuration took: %.3f ms", 
+        // [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
 
         // Get input format
         NSLog(@"Setting up audio format...");
@@ -87,9 +90,9 @@
         NSLog(@"Getting input node took: %.3f ms", 
               [[NSDate date] timeIntervalSinceDate:inputNodeStartTime] * 1000);
         
-        // Setup voice processing if available
-        NSLog(@"Setting up voice processing...");
-        NSDate *voiceProcessingStartTime = [NSDate date];
+        // // Setup voice processing if available
+        // NSLog(@"Setting up voice processing...");
+        // NSDate *voiceProcessingStartTime = [NSDate date];
 
         // if (@available(iOS 13.0, *)) {
         //     NSError* vpError = nil;
