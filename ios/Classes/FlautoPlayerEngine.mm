@@ -170,6 +170,35 @@
        {
                 NSLog(@"[AudioEngine] Init start");
                 CFTimeInterval startTime = CACurrentMediaTime();
+
+                // AVAudioSession *session = [AVAudioSession sharedInstance];
+                // NSError *error = nil;
+                
+                // // Set preferred sample rate
+                // // double preferredSampleRate = [[audioSettings objectForKey:AVSampleRateKey] doubleValue];
+                // // [session setPreferredSampleRate:preferredSampleRate error:&error];
+                // // if (error) {
+                // //     NSLog(@"Failed to set preferred sample rate");
+                // }
+                
+                // // Set audio session category and mode
+                // [session setCategory:AVAudioSessionCategoryPlayAndRecord 
+                //               mode:AVAudioSessionModeVoiceChat
+                //            options:AVAudioSessionCategoryOptionAllowBluetooth|
+                //                   AVAudioSessionCategoryOptionAllowBluetoothA2DP|
+                //                   AVAudioSessionCategoryOptionDefaultToSpeaker
+                //              error:&error];
+                // if (error) {
+                //     NSLog(@"Failed to set audio session category");
+                // }
+                
+                // [session setActive:YES error:&error];
+                // if (error) {
+                //     NSLog(@"Failed to activate audio session");
+                // }
+
+                // NSLog(@"Audio session configuration took: %.3f ms", 
+                //       [[NSDate date] timeIntervalSinceDate:sessionStartTime] * 1000);
                 
                 flutterSoundPlayer = owner;
                 waitingBlock = nil;
@@ -179,18 +208,20 @@
                 outputNode = [engine outputNode];
                 NSLog(@"[AudioEngine] Audio engine created: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
            
-                if (@available(iOS 13.0, *)) {
-                        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                                NSError* vpError = nil;
-                        if (![outputNode setVoiceProcessingEnabled:YES error:&vpError]) {
-                                NSLog(@"Failed to enable voice processing: %@", vpError.localizedDescription);
-                        } else {
-                                NSLog(@"Voice processing enabled successfully");
-                        }
-                        });
-                } else {
-                NSLog(@"WARNING! Voice processing is only available on iOS 13+");
-                }
+                // CFTimeInterval vpStartTime = CACurrentMediaTime();
+                // if (@available(iOS 13.0, *)) {
+                //         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                //                 NSError* vpError = nil;
+                //         if (![outputNode setVoiceProcessingEnabled:YES error:&vpError]) {
+                //                 NSLog(@"Failed to enable voice processing: %@", vpError.localizedDescription);
+                //         } else {
+                //                 NSLog(@"Voice processing enabled successfully");
+                //         }
+                //         });
+                // } else {
+                //         NSLog(@"WARNING! Voice processing is only available on iOS 13+");
+                // }
+                // NSLog(@"[AudioEngine] Voice processing took: %.3fms", (CACurrentMediaTime() - vpStartTime) * 1000);
                
                 NSLog(@"[AudioEngine] Getting output format");
                 outputFormat = [outputNode inputFormatForBus: 0];
