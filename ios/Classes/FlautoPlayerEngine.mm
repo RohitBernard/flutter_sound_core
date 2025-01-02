@@ -209,6 +209,11 @@
                 outputNode = [engine outputNode];
                 NSLog(@"[AudioEngine] Audio engine created: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
            
+                CFTimeInterval engineResetTime = CACurrentMediaTime();
+                [engine stop];
+                [engine reset]; // Simplifies the audio graph
+                NSLog(@"[AudioEngine] Engine reset: %.3fms", (CACurrentMediaTime() - engineResetTime) * 1000);
+        
                 CFTimeInterval vpStartTime = CACurrentMediaTime();
                 if (@available(iOS 13.0, *)) {
                         // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
