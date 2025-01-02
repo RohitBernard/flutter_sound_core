@@ -173,6 +173,8 @@
 
                 AVAudioSession *session = [AVAudioSession sharedInstance];
                 NSError *error = nil;
+
+                NSDate *sessionStartTime = [NSDate date];
                 
                 // Set preferred sample rate
                 [session setPreferredSampleRate:(double)m_sampleRate error:&error];
