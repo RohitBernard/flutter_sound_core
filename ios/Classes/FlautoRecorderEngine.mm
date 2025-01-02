@@ -105,8 +105,8 @@
         //     NSLog(@"WARNING! Voice processing is only available on iOS 13+");
         // }
 
-        NSLog(@"Voice processing setup took: %.3f ms", 
-              [[NSDate date] timeIntervalSinceDate:voiceProcessingStartTime] * 1000);
+        // NSLog(@"Voice processing setup took: %.3f ms", 
+        //       [[NSDate date] timeIntervalSinceDate:voiceProcessingStartTime] * 1000);
 
         // Get input format
         NSLog(@"Getting input format...");
