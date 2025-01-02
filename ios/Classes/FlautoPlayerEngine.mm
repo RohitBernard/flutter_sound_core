@@ -227,8 +227,6 @@
                 }
                 NSLog(@"[AudioEngine] Voice processing took: %.3fms", (CACurrentMediaTime() - vpStartTime) * 1000);
 
-                return [super init];
-
                 NSLog(@"[AudioEngine] Getting output format");
                 outputFormat = [outputNode inputFormatForBus: 0];
                 NSLog(@"[AudioEngine] Output format setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
@@ -259,6 +257,8 @@
                 [engine attachNode: playerNode];
                 [engine connect: playerNode to: outputNode format: outputFormat];
                 NSLog(@"[AudioEngine] Player node setup: %.3fms", (CACurrentMediaTime() - startTime) * 1000);
+
+                return [super init];
 
                 NSLog(@"[AudioEngine] Starting engine");
                 bool b = [engine startAndReturnError: nil];
