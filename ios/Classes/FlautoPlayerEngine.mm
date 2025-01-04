@@ -356,13 +356,13 @@
                 [playerNode pause];
 
                 // Clear any waiting blocks
-                // waitingBlock = nil;
+                waitingBlock = nil;
                 
-                // // Stop processing new buffers
-                // ready = 0;
+                // Stop processing new buffers
+                ready = 0;
                 
-                // // Optional: Clear any scheduled buffers
-                // [playerNode reset];
+                // Optional: Clear any scheduled buffers
+                [playerNode reset];
                 
                 return true;
         //     }
@@ -413,7 +413,7 @@
 #define NB_BUFFERS 4
 - (int) feed: (NSData*)data
 {
-    @synchronized(self) {
+//     @synchronized(self) {
         if (ready < NB_BUFFERS) {
             int ln = (int)[data length];  // Length in bytes
             int frameLn = ln / 2;  // Since each int16_t is 2 bytes, divide by 2
@@ -495,7 +495,7 @@
             }
             return 0;
         }
-    }
+//     }
 }
 
 
