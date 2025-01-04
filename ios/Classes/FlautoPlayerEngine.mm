@@ -343,17 +343,29 @@
        {
         if (mStartPauseTime >= 0)
             mPauseTime += CACurrentMediaTime() - mStartPauseTime;
-        mStartPauseTime = -1;
+            mStartPauseTime = -1;
 
-        [playerNode play];
-                return true;
+            [playerNode play];
+            return true;
        }
 
        -(bool)  pause
        {
-        mStartPauseTime = CACurrentMediaTime();
-        [playerNode pause];
+            @synchronized(self) {
+                mStartPauseTime = CACurrentMediaTime();
+                [playerNode pause];
+
+                // Clear any waiting blocks
+                waitingBlock = nil;
+                
+                // Stop processing new buffers
+                ready = 0;
+                
+                // Optional: Clear any scheduled buffers
+                [playerNode reset];
+                
                 return true;
+            }
        }
 
 
@@ -401,85 +413,88 @@
 #define NB_BUFFERS 4
 - (int) feed: (NSData*)data
 {
-    if (ready < NB_BUFFERS)
-    {
-        int ln = (int)[data length];  // Length in bytes
-        int frameLn = ln / 2;  // Since each int16_t is 2 bytes, divide by 2
-        int frameLength = frameLn;  // For float32 output, 1 frame = 1 float
+    @synchronized(self) {
+        if (ready < NB_BUFFERS) {
+            int ln = (int)[data length];  // Length in bytes
+            int frameLn = ln / 2;  // Since each int16_t is 2 bytes, divide by 2
+            int frameLength = frameLn;  // For float32 output, 1 frame = 1 float
 
-        // Create input format for Int16 data
-        inputFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16
-                                                       sampleRate: (double)m_sampleRate
-                                                         channels: m_numChannels
-                                                      interleaved: NO];
+            // Create input format for Int16 data
+            inputFormat = [[AVAudioFormat alloc] initWithCommonFormat: AVAudioPCMFormatInt16
+                                                           sampleRate: (double)m_sampleRate
+                                                             channels: m_numChannels
+                                                          interleaved: NO];
 
-        // Create a buffer for the incoming Int16 data
-        AVAudioPCMBuffer* thePCMInputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: inputFormat frameCapacity: frameLn];
-        memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
-        thePCMInputBuffer.frameLength = frameLn;
+            // Create a buffer for the incoming Int16 data
+            AVAudioPCMBuffer* thePCMInputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: inputFormat frameCapacity: frameLn];
+            memcpy((unsigned char*)(thePCMInputBuffer.int16ChannelData[0]), [data bytes], ln);
+            thePCMInputBuffer.frameLength = frameLn;
 
-        // Conversion from int16 to float32
-        AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLn];
-        thePCMOutputBuffer.frameLength = frameLn;
+            // Conversion from int16 to float32
+            AVAudioPCMBuffer* thePCMOutputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat: outputFormat frameCapacity: frameLn];
+            thePCMOutputBuffer.frameLength = frameLn;
 
-        // Conversion loop: converting each int16 to float32
-        int16_t* inputPtr = thePCMInputBuffer.int16ChannelData[0];
-        float* outputPtr = thePCMOutputBuffer.floatChannelData[0];
+            // Conversion loop: converting each int16 to float32
+            int16_t* inputPtr = thePCMInputBuffer.int16ChannelData[0];
+            float* outputPtr = thePCMOutputBuffer.floatChannelData[0];
 
-        for (int i = 0; i < frameLn; i++) {
-            // Convert int16 to float32
-            outputPtr[i] = (float)inputPtr[i] / 32767.0f;
-        }
+            for (int i = 0; i < frameLn; i++) {
+                // Convert int16 to float32
+                outputPtr[i] = (float)inputPtr[i] / 32767.0f;
+            }
 
-        static bool hasData = true;
-        hasData = true;
+            static bool hasData = true;
+            hasData = true;
 
-        AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
-        {
-            *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
-            hasData = false;
-            return thePCMInputBuffer;
-        };
-
-        // Ensure converter is properly initialized
-        if (converter == nil)
-        {
-            converter = [[AVAudioConverter alloc] initFromFormat: inputFormat toFormat: outputFormat];
-        }
-
-        NSError* error;
-        [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
-
-        if (true) // You can replace 'true' with actual condition if needed
-        {
-            ++ready;
-            [playerNode scheduleBuffer: thePCMOutputBuffer completionHandler:
-            ^(void)
+            AVAudioConverterInputBlock inputBlock = ^AVAudioBuffer*(AVAudioPacketCount inNumberOfPackets, AVAudioConverterInputStatus* outStatus)
             {
-                dispatch_async(dispatch_get_main_queue(),
-                ^{
-                    --ready;
-                    assert(ready < NB_BUFFERS);
-                    if (self->waitingBlock != nil)
-                    {
-                        NSData* blk = self->waitingBlock;
-                        self->waitingBlock = nil;
-                        int ln = (int)[blk length];
-                        int l = [self feed: blk]; // Recursion here
-                        assert(l == ln);
-                        [self->flutterSoundPlayer needSomeFood: ln];
-                    }
-                });
-            }];
-            return ln;
+                *outStatus = hasData ? AVAudioConverterInputStatus_HaveData : AVAudioConverterInputStatus_NoDataNow;
+                hasData = false;
+                return thePCMInputBuffer;
+            };
+
+            // Ensure converter is properly initialized
+            if (converter == nil)
+            {
+                converter = [[AVAudioConverter alloc] initFromFormat: inputFormat toFormat: outputFormat];
+            }
+
+            NSError* error;
+            [converter convertToBuffer: thePCMOutputBuffer error: &error withInputFromBlock: inputBlock];
+
+            if (true) // You can replace 'true' with actual condition if needed
+            {
+                ++ready;
+                [playerNode scheduleBuffer: thePCMOutputBuffer completionHandler:
+                ^(void)
+                {
+                    dispatch_async(dispatch_get_main_queue(),
+                    ^{
+                        --ready;
+                        assert(ready < NB_BUFFERS);
+                        if (self->waitingBlock != nil)
+                        {
+                            NSData* blk = self->waitingBlock;
+                            self->waitingBlock = nil;
+                            int ln = (int)[blk length];
+                            int l = [self feed: blk]; // Recursion here
+                            assert(l == ln);
+                            [self->flutterSoundPlayer needSomeFood: ln];
+                        }
+                        if (ready == 0) // Nothing more to play. Send an indication to the App
+                        {
+                            [self ->flutterSoundPlayer  audioPlayerDidFinishPlaying: true];
+                        }
+                    });
+                }];
+                return ln;
+            }
+        } else {
+            if (!waitingBlock) {
+                waitingBlock = data;
+            }
+            return 0;
         }
-    }
-    else
-    {
-        assert(ready == NB_BUFFERS);
-        assert(waitingBlock == nil);
-        waitingBlock = data;
-        return 0;
     }
 }
 
