@@ -355,7 +355,7 @@
                 mStartPauseTime = CACurrentMediaTime();
                 [playerNode pause];
 
-                Clear any waiting blocks
+                // Clear any waiting blocks
                 // waitingBlock = nil;
                 
                 // // Stop processing new buffers
