@@ -481,10 +481,10 @@
                             assert(l == ln);
                             [self->flutterSoundPlayer needSomeFood: ln];
                         }
-                        if (ready == 0) // Nothing more to play. Send an indication to the App
-                        {
-                            [self ->flutterSoundPlayer  audioPlayerDidFinishPlaying: true];
-                        }
+                        // if (ready == 0) // Nothing more to play. Send an indication to the App
+                        // {
+                        //     [self ->flutterSoundPlayer  audioPlayerDidFinishPlaying: true];
+                        // }
                     });
                 }];
                 return ln;
