@@ -351,21 +351,21 @@
 
        -(bool)  pause
        {
-            @synchronized(self) {
+        //     @synchronized(self) {
                 mStartPauseTime = CACurrentMediaTime();
                 [playerNode pause];
 
-                // Clear any waiting blocks
-                waitingBlock = nil;
+                Clear any waiting blocks
+                // waitingBlock = nil;
                 
-                // Stop processing new buffers
-                ready = 0;
+                // // Stop processing new buffers
+                // ready = 0;
                 
-                // Optional: Clear any scheduled buffers
-                [playerNode reset];
+                // // Optional: Clear any scheduled buffers
+                // [playerNode reset];
                 
                 return true;
-            }
+        //     }
        }
 
 
